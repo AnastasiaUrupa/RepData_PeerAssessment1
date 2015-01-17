@@ -1,131 +1,128 @@
-Reproducible research
-======================
-##Peer Assesment 1 
-by Anastasia Urupa
+Peer Assessment 1: Activity monitoring data
+===========================================
 
-### Introduction
+###Introduction
+
 
 It is now possible to collect a large amount of data about personal movement using activity monitoring devices such as a Fitbit, Nike Fuelband, or Jawbone Up. These type of devices are part of the Уquantified selfФ movement Ц a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. But these data remain under-utilized both because the raw data are hard to obtain and there is a lack of statistical methods and software for processing and interpreting the data.
 
-This assignment makes use of data from a personal activity monitoring device. This device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day
+This assignment makes use of data from a personal activity monitoring device. This device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
 
-### Data
+###Data
 
-The data for this assignment can be downloaded from the course web site:
+The data for this assignment can be downloaded from the course web site: 
 
-- Dataset: [Activity monitoring data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip)
+- Dataset: [Activity monitoring data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip)  
 
 The variables included in this dataset are:
 
-- steps: Number of steps taking in a 5-minute interval (missing values are coded as NA)
-
+- steps: Number of steps taking in a 5-minute interval (missing values are coded as NA)  
 - date: The date on which the measurement was taken in YYYY-MM-DD format
 
 - interval: Identifier for the 5-minute interval in which measurement was taken
 
 The dataset is stored in a comma-separated-value (CSV) file and there are a total of 17,568 observations in this dataset.
 
-### Loading and preprocessing the data
+###Loading and preprocessing the data
 
 ```{r}
-data<-read.csv("C:/Users/Ќаст€/Documents/R/repdata-data-activity/activity.csv", stringsAsFactors=F)
-data$date<-as.Date(data$date, format="%Y-%m-%d")
-data$index<-seq(along=data$steps)
-summary(data)
+setwd("~/R/repdata-data-activity")
+data<-read.csv("activity.csv", stringsAsFactors=FALSE)
+data$date<-as.Date(data$date)
+str(data)
 ```
 
-### What is mean total number of steps taken per day?
-
-Histogram of the total number of steps taken each day:
+###What is mean total number of steps taken per day?
 
 ```{r}
-dailySum<-tapply(data$steps, data$date, sum, na.rm=T)
-hist(dailySum, breaks=15, main="Total number of steps per day", xlab="Steps per day")
-abline(v=mean(dailySum), col="red", lwd=3)
-abline(v=median(dailySum), col="blue", lwd=3)
+library(reshape2)
+meltdata<-melt(data,id=c("date","interval"),measure.vars="steps")
+dailydata<-dcast(meltdata, date~variable,sum)
+hist(dailydata$steps, breaks=15,col="cyan", 
+     main="Histogram of total number of steps taken per day")
+abline(v=median(dailydata$steps,na.rm=TRUE),col='red',lwd=4)
+
 ```
 
-Mean of total number of steps taken each day:
-```{r}
-mean(dailySum)
-```
-
-Median of total number of steps taken each day:
-```{r}
-median(dailySum)
-```
-
-### What is the average daily activity pattern?
-
-Average number of steps in each 5-minute interval:
+**Mean and median of total number of steps taken each day:**
 
 ```{r}
-intervalMean<-tapply(data$steps, data$interval, mean, na.rm=T)
-plot(unique(data$interval), intervalMean, type="l", main="Daily Activity", 
-     xlab="Interval", ylab="Average number of steps")
+median(dailydata$steps,na.rm=TRUE)
+mean(dailydata$steps,na.rm=TRUE)
 ```
 
-5-minute interval with maximum average number of steps:
-```{r}
-unique(data$interval)[seq(along=intervalMean)[intervalMean==max(intervalMean)]]
-```
-
-### Imputing missing values
-
-Number of missing values:
+###What is the average daily activity pattern?
 
 ```{r}
-sum(!complete.cases(data))
+intdata<-dcast(meltdata,interval~variable, mean, na.rm=TRUE)
+plot(intdata, type="l", lwd=1, main="Average daily activity pattern")
 ```
 
-Imputing missing values with the mean for that 5-minute interval:
-
-```{r, result="hide"}
-imeans<-cbind(unique(data$interval), intervalMean)
-imeans<-data.frame (imeans)
-datameans<-merge(data, imeans, by.x="interval", by.y="V1")
-datameans<-datameans[order(datameans$index),]
-dataNoNa<-data
-dataNoNa$steps[is.na(dataNoNa$steps)]<-datameans$intervalMean[datameans$index %in% dataNoNa$index[is.na(dataNoNa$steps)]]
-```
-
-Histogram of total number of steps per day for dataset with imputed values:
-```{r}
-dailySum1<-tapply(dataNoNa$steps, dataNoNa$date, sum, na.rm=T)
-hist(dailySum1, breaks=15, main="Total number of steps per day", xlab="Steps per day")
-abline(v=mean(dailySum1), col="red", lwd=3)
-abline(v=median(dailySum1), col="blue", lwd=3)
-```
-
-Mean of total number of steps taken each day for dataset with imputed values:
-```{r}
-mean(dailySum1)
-```
-
-Median of total number of steps taken each day for dataset with imputed values:
-```{r}
-median(dailySum1)
-```
-
-As we can see from the figures above, imputing NAs changes the histogram considerably. Missing values lower total number of steps taken each day, and therefore median and mean too.
-
-### Are there differences in activity patterns between weekdays and weekends?
-
-Creating factor variable with 2 levels: "weekday" and "weekend":
-
-```{r, results="hide"}
-weekday<-weekdays(data$date)
-weekday[weekday %in% c("понедельник", "вторник","среда","четверг","п€тница")]<-"weekday"
-weekday[weekday %in% c("суббота", "воскресенье")]<-"weekend"
-data$weekday<-as.factor(weekday)
-```
+**Interval with the maxmum average number of steps:**
 
 ```{r}
-data1<-data[data$weekday=="weekday",]
-data2<-data[data$weekday=="weekend",]
-intervalMean1<-tapply(data1$steps, data1$interval, mean, na.rm=T)
-intervalMean2<-tapply(data2$steps, data2$interval, mean, na.rm=T)
-par(mfrow=c(2,1),mar=c(2,4,3,3))
-plot(unique(data1$interval), intervalMean1, type="l", main="Weekday", xlab="Interval", ylab="Average number of steps")
-plot(unique(data2$interval), intervalMean2, type="l", main="Weekend", xlab="Interval", ylab="Average number of steps")
+intdata[intdata$steps==max(intdata$steps),]
 ```
+
+###Imputing missing values
+
+Total number of missing values:
+```{r}
+sum(is.na(data))
+```
+
+Imputing missing values with the average number of steps for particular 5-minute interval:
+
+```{r}
+impdata<-data
+for (i in 1:nrow(data))
+  {
+    if (is.na(data$steps[i]))
+    impdata$steps[i]<-intdata[intdata$interval==impdata$interval[i],2]
+  }
+```
+
+Checking if any mising value left:
+
+```{r}
+sum(is.na(impdata))
+```
+
+Analysing total number of steps taken each day for imputed dataset:
+
+```{r}
+meltdata1<-melt(impdata,id=c("date","interval"),measure.vars="steps")
+dailydata1<-dcast(meltdata1, date~variable,sum)
+hist(dailydata1$steps, breaks=15,col="cyan", 
+     main="Histogram of total number of steps taken per day (after imputing NAs)")
+abline(v=median(dailydata1$steps,na.rm=TRUE),col='red',lwd=4)
+median(dailydata1$steps,na.rm=TRUE)
+mean(dailydata1$steps,na.rm=TRUE)
+```
+
+Comparing original and imputed datasets:
+
+```{r, fig.width=10}
+par(mfrow=c(1,2))
+hist(dailydata$steps, breaks=15,col="cyan", 
+     main="Total number of steps per day")
+abline(v=median(dailydata$steps,na.rm=TRUE),col='red',lwd=4)
+hist(dailydata1$steps, breaks=15,col="cyan", 
+     main="Total number of steps per day (imputed dataset)")
+abline(v=median(dailydata1$steps,na.rm=TRUE),col='red',lwd=4)
+```
+
+  The historgams above demonstrate that imputing missing values in the dataset didn't change mean and median significantly, but they became closer to each other. The histigorgam changed a little, as in the second dataset more days have total number of steps close to average. Such effect is natural, considering the strategy used for imputing missing values.
+
+###Are there differences in activity patterns between weekdays and weekends?
+
+```{r, fig.width=10}
+library(lattice)
+impdata$weekday<-factor(ifelse(weekdays(impdata$date) %in% c("понедельник","вторник", "среда", "четверг", "п€тница"),"weekday","weekend"))
+meltdata2<-melt(impdata,id=c("date","interval","weekday"),measure.vars="steps")
+intdata2<-dcast(meltdata2, weekday+interval~variable,mean)
+xyplot(steps~interval | weekday, data=intdata2, type="l", layout=c(1,2))
+```
+
+From the figures above we can see that indeed activity patterns are a bit diffrent for weekdays and weekends: on weekend the given individual takes less steps in the morning, but more steps during the day. Interesting, that maximum of steps taken still takes place in the morning, regardless of the weekday.
+
